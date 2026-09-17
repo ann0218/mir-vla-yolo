@@ -1,0 +1,25 @@
+WEARS=[purple=red yellow=yellow] WORDS=[red yellow ] -> /home/itri/mir_isaac_test/vla/results_2p/cl_batch_redyellow
+seed 1  red  target=purple steps=700 on_target=8% median|bearing| all=101deg late=76deg longest_lock=3.5s
+seed 1  yellow  target=yellow steps=700 on_target=72% median|bearing| all=56deg late=57deg longest_lock=23.7s
+seed 2  red  target=purple steps=700 on_target=58% median|bearing| all=14deg late=11deg longest_lock=18.7s
+seed 2  yellow  target=yellow steps=700 on_target=75% median|bearing| all=12deg late=4deg longest_lock=27.3s
+seed 3  red  target=purple steps=700 on_target=100% median|bearing| all=17deg late=3deg longest_lock=66.3s
+seed 3  yellow  target=yellow steps=700 on_target=0% median|bearing| all=160deg late=172deg longest_lock=0.0s
+seed 4  red  target=purple steps=700 on_target=74% median|bearing| all=23deg late=10deg longest_lock=33.9s
+seed 4  yellow  target=yellow steps=700 on_target=23% median|bearing| all=50deg late=41deg longest_lock=9.5s
+seed 5  red  target=purple steps=700 on_target=47% median|bearing| all=39deg late=18deg longest_lock=18.3s
+seed 5  yellow  target=yellow steps=700 on_target=44% median|bearing| all=24deg late=34deg longest_lock=29.8s
+seed 6  red  target=purple steps=700 on_target=78% median|bearing| all=68deg late=134deg longest_lock=43.8s
+seed 6  yellow  target=yellow steps=700 on_target=0% median|bearing| all=127deg late=105deg longest_lock=0.0s
+seed 7  red  target=purple steps=700 on_target=94% median|bearing| all=21deg late=30deg longest_lock=66.0s
+seed 7  yellow  target=yellow steps=700 on_target=5% median|bearing| all=111deg late=159deg longest_lock=3.5s
+seed 8  red  target=purple steps=700 on_target=80% median|bearing| all=34deg late=30deg longest_lock=41.3s
+seed 8  yellow  target=yellow steps=700 on_target=79% median|bearing| all=6deg late=5deg longest_lock=50.3s
+seed 9  red  
+seed 9  yellow  target=yellow steps=700 on_target=32% median|bearing| all=56deg late=56deg longest_lock=20.2s
+seed 10  red  target=purple steps=700 on_target=72% median|bearing| all=8deg late=5deg longest_lock=43.1s
+seed 10  yellow  target=yellow steps=700 on_target=27% median|bearing| all=44deg late=66deg longest_lock=15.1s
+seed 11  red  target=purple steps=700 on_target=40% median|bearing| all=52deg late=59deg longest_lock=26.8s
+seed 11  yellow  target=yellow steps=700 on_target=47% median|bearing| all=82deg late=22deg longest_lock=27.1s
+seed 12  red  target=purple steps=700 on_target=67% median|bearing| all=8deg late=5deg longest_lock=25.6s
+seed 12  yellow  target=yellow steps=700 on_target=27% median|bearing| all=34deg late=33deg longest_lock=15.4s

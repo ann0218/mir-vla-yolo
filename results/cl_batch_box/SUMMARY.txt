@@ -1,0 +1,80 @@
+Closed-loop batch, box-action policy, seeds 1-12 -- 2026-09-17
+Design fixed beforehand in DESIGN.txt (same folder).
+
+checkpoint  train/smolvla_mswall_box/checkpoints/030000 -- action = 7 dims
+            [v, w, box_x1, box_y1, box_x2, box_y2, box_visible], 30k steps, final loss 0.050
+            (the 2-dim model reached 0.020; the extra dims are regression targets too)
+            config.json confirms output_features action shape [7]
+dataset     lerobot_mswall_box, same 37/10 episode split as lerobot_mswall. Box labels come
+            from the crop pipeline's own YOLO detections, matched to the named person by
+            u = cx - fx*(y/x); 72.1 % of training frames carry a box, the rest are zeros
+            with box_visible = 0. Six sampled frames were checked by eye: all six boxes on
+            the named person (label_check.png)
+runner      runner_2p.py --drive --max-accel 1.0 --true-front --cam-stop-y2 470
+            --cam-stop-halfdeg 25 --estop-dist 0 --gt-monitor-dist 1.0 --seconds 70
+            --warmup 25 --max-w 0.6 --max-dw 1.2 --trace
+            identical to cl_batch_drive_safe, which is the control for this batch
+failures    none -- 24/24 runs completed, no tip-overs
+
+seed side   purple on/view(named,other)   yellow on/view(named,other)   on-sum
+   1  L      60% ( 45%, 40%)           93% ( 68%, 18%)          153%  view-diff   +55
+   2  R      65% ( 60%, 20%)           54% ( 33%, 20%)          119%  view-diff   +53
+   3  L      75% ( 52%, 15%)           65% ( 67%, 38%)          140%  view-diff   +66
+   4  R      76% ( 38%, 19%)           54% ( 50%, 49%)          130%  view-diff   +20
+   5  L      64% ( 50%, 13%)           34% ( 11%, 52%)           98%  view-diff    -4
+   6  R      71% ( 36%, 11%)           85% ( 82%, 20%)          156%  view-diff   +87
+   7  L      98% ( 91%,  5%)           73% ( 58%, 24%)          171%  view-diff  +120
+   8  R      56% ( 39%, 28%)           83% ( 76%, 26%)          139%  view-diff   +60
+   9  L      53% ( 33%, 30%)           63% ( 31%, 24%)          116%  view-diff   +11
+  10  R      27% ( 19%, 36%)           44% ( 30%, 34%)           71%  view-diff   -21
+  11  L      49% ( 57%, 44%)           73% ( 55%, 25%)          122%  view-diff   +43
+  12  R      67% ( 43%, 13%)           76% ( 69%, 27%)          143%  view-diff   +73
+
+on_target sum - 100 over 12 pairs: mean +29.8, t = 3.80, two-sided p = 0.003; 10/12 above
+in-view named-minus-other over 12 pairs: mean +46.8 pts, t = 4.08, two-sided p = 0.002; 10/12 above 0
+named person in view 49.7 %, distance 3.04 m, within 1.5-3.0 m 58.5 %, commanded v +0.27 m/s
+safety: closest approach 0.75 m (median over runs 1.12), 134 steps with a person < 1 m ahead,
+        1615 camera stops, 4312 acceleration clips, 0 tip-overs
+
+Same seeds against cl_batch_drive_safe (same runner, same sim, policy without the box dims)
+  on_target sum        +4.00  p = 0.67   box higher 7/12
+  named person in view +2.04  p = 0.70   7/12
+  named-person distance +0.07 m p = 0.60  5/12
+  steps < 1 m ahead    +1.88  p = 0.43   6/12
+  None significant: predicting the box cost nothing measurable in control, and bought
+  nothing measurable either. The instruction effect is intact (p = 0.003 / 0.002).
+
+What the predicted box is worth
+  offline, held-out frames driven by the expert (probe_box.py, 150 frames)
+      visibility agreement 92 %, box centre error median 11 px, p90 48 px, 95 % within 60 px
+      box on the named person in 87 of 92 frames, on the other person in 1
+  closed loop, this batch (analyze_box.py, 16800 steps)
+      says visible 55.6 % of steps, truth 49.7 %, agreement 86.9 %
+      box centre error median 38 px, p90 139 px, within 60 px 67 %
+      box points at: named 5074, other 483, neither 3684
+  per run, share of scored steps with the box on the named person: 37.7 % to 76.3 %
+      worst s10_purple 37.7 %, s5_yellow 38.8 %; best s12_yellow 76.3 %, s6_yellow 75.4 %
+
+Reading
+- The box dimensions learned. Offline the policy localises the named person almost exactly
+  (11 px median, 87:1 against the distractor), and it does so from the instruction: the two
+  people are identical apart from colour.
+- Localisation degrades once the policy drives itself: 38 px median, 67 % within 60 px. That
+  is distribution shift, the reading DESIGN.txt anticipated -- the frames it now sees are
+  ones the expert never produced.
+- The failure mode is NOT confusing the two people. Of 9241 steps where it claims a box and
+  the named person is in view, only 483 (5 %) land on the other person; 3684 (40 %) land on
+  neither -- vague localisation rather than mistaken identity.
+- Control is unchanged within noise, so the interpretability is close to free at this scale.
+- Caveat: offline "box on the named person" is measured against labels that were themselves
+  produced by YOLO plus ground-truth matching, so it shows the model reproduces that
+  labelling, not that the labelling is right. The eyeball check on six frames is the only
+  independent evidence that the labels are correct.
+- Caveat: a sharper offline test -- both people in view, the DISTRACTOR nearer the image
+  centre -- gave only 23 scorable frames (named 13, other 3, neither 7, median error 49 px).
+  Too few to conclude, but it hints the model is pulled towards whoever is central.
+
+Next, if this is taken further
+  draw the predicted box on a recorded closed-loop clip, which is what makes the diagnosis
+  legible to a reader; and test whether "neither" steps coincide with the turns that lose
+  the person.

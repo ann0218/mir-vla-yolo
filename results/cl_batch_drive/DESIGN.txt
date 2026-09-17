@@ -1,0 +1,41 @@
+Driving closed-loop batch -- design, written 2026-09-15 BEFORE any run of this batch
+(a 20 s smoke test, smoke_drive.csv, was run first to check the plumbing only)
+
+Question: with its forward speed actually published, does smolvla_mswall follow
+the person the instruction names?
+
+Why this batch exists: smolvla_mswall was trained on DRIVING data
+(collect_2p_move_sw.py; expert v non-zero in 93 % of steps, mean 0.22 m/s), but
+every earlier closed-loop batch ran runner_2p.py with v forced to 0, while the
+policy kept asking for v ~ +0.32 m/s.
+
+checkpoint  train/smolvla_mswall/checkpoints/030000, no retraining
+scene       scenes/follow_room_2p_v2.usd (purple + yellow, the training scene)
+sim         launch_2p_drive.sh = launch_2p_eval.sh with person avoidance back at the
+            collection defaults (2.6 m forward cone / 1.2 m any direction) instead
+            of 3.5 / 2.0. People start at (4.5, +-1.3), odd seeds swap sides.
+arm         tucked through the controller (tuck_arm.sh, elbow 2.616) before the
+            batch; platform view checked to show no arm, as in the training frames
+runner      runner_2p.py --drive --seconds 70 --warmup 25 --max-w 0.6 --max-dw 1.2 --trace
+            Safety layer copied from follow_expert.py, same order: clip v to
+            [-1, 1], front-lidar wall limit (slow from 1.6 m, stop at 0.7 m, 90 deg
+            arc), |v*w| <= 0.45. NOT copied: the expert's ground-truth back-off and
+            stuck recovery. ADDED, not in the expert: emergency stop -- no forward
+            speed while a person is < 1.0 m ahead (ground truth); counted per step.
+words       purple / yellow, target = the person wearing the named colour
+
+Compared with cl_batch_balanced (same checkpoint, same seeds, v forced to 0), this
+batch differs in: v published + safety layer; person avoidance 2.6/1.2 instead of
+3.5/2.0; arm verifiably tucked. So a difference between the two batches cannot be
+put on driving alone.
+
+Scores
+  instruction  on_target sum over the purple/yellow pair (100 % if the instruction is
+               ignored) and in-view named-minus-other, paired over seeds -- as before
+  following    named-person distance: mean, and % of steps within 1.5-3.0 m
+               (the expert holds 2.0 m); % of steps the named person is in view
+  safety       closest approach to either person, emergency-stop steps, tip-overs
+  reported per word as well as paired.
+
+No significance threshold is set for a pass/fail call; p-values are reported.
+A run that needed emergency stops is reported as such, not hidden in the means.

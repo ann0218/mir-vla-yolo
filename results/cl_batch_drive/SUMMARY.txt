@@ -1,0 +1,99 @@
+Driving closed-loop batch, seeds 1-12 -- 2026-09-15
+Design fixed beforehand in DESIGN.txt (same folder). smoke_drive.csv is the 20 s plumbing
+check run before the batch and is not part of any number below.
+
+checkpoint  train/smolvla_mswall/checkpoints/030000, no retraining
+scene       follow_room_2p_v2.usd (purple + yellow), launch_2p_drive.sh
+            (person avoidance 2.6 / 1.2 m, the collection defaults), arm tucked
+runner      runner_2p.py --drive --seconds 70 --warmup 25 --max-w 0.6 --max-dw 1.2 --trace
+            safety as in follow_expert.py (clip, front-lidar wall limit, |v*w| <= 0.45)
+            + emergency stop (< 1.0 m ahead, ground truth, counted)
+failures    s11_yellow -- ROBOT TIPPED OVER (tilt 62 deg) at step 136. Pair 11 dropped.
+detections  server, this batch incl. smoke test, ~16500 frames:
+            0 people 33 %, 1 person 55 %, 2 people 12 %
+
+seed side   purple on/view(named,other)   yellow on/view(named,other)   on-sum
+   1  L      59% ( 51%, 54%)           81% ( 67%, 25%)          140%  view-diff   +39
+   2  R      78% ( 62%, 30%)           69% ( 48%, 15%)          147%  view-diff   +64
+   3  L      67% ( 23%, 23%)           92% ( 73%, 25%)          159%  view-diff   +47
+   4  R      58% ( 37%, 24%)           85% ( 54%, 12%)          143%  view-diff   +54
+   5  L      73% ( 56%, 11%)           42% ( 39%, 44%)          115%  view-diff   +41
+   6  R      72% ( 47%, 15%)           70% ( 64%, 24%)          142%  view-diff   +72
+   7  L      52% ( 42%, 22%)           79% ( 69%, 22%)          131%  view-diff   +66
+   8  R      72% ( 58%, 32%)           72% ( 62%, 26%)          144%  view-diff   +63
+   9  L      54% ( 38%, 34%)           82% ( 65%, 19%)          136%  view-diff   +51
+  10  R      36% ( 44%, 51%)           68% ( 63%, 30%)          104%  view-diff   +26
+  12  R      66% ( 31%, 24%)           69% ( 64%, 29%)          135%  view-diff   +43
+
+on_target sum - 100 over 11 pairs: mean +36.0, t = 7.86, two-sided p < 0.001; 11/11 above
+in-view named-minus-other over 11 traced pairs: mean +51.5 pts, t = 12.26, two-sided p < 0.001; 11/11 above 0
+named person in view, mean over traced runs: 51.8 %
+
+Following (23 completed runs)
+  named-person distance mean 2.82 m (the expert holds 2.0 m), within 1.5-3.0 m 62.5 %
+  commanded v mean +0.31 m/s
+  per word   purple: in view 43.7 % (other 28.6 %), distance 2.99 m, 1.5-3 m 55.7 %
+             yellow: in view 60.7 % (other 24.7 %), distance 2.63 m, 1.5-3 m 69.9 %
+
+Safety
+  closest approach to anyone: 0.70 m (median over runs 1.04 m)
+  emergency stop fired in 9/23 runs, 175 steps in all
+  steps under 1.0 m: named person 46, OTHER person 184
+  at emergency stops the nearer person was the other one in 138 of 175 steps --
+  the robot mostly comes too close to the distractor, not the person it follows
+  runs:  s1_purple 7, s1_yellow 11, s3_purple 21, s3_yellow 5, s8_purple 3,
+         s9_yellow 27, s10_yellow 85, s12_purple 9, s12_yellow 7 steps
+
+Tip-over s11_yellow, from its trace (the first tip with distances logged)
+  not a sustained spin at the end (a 55-step run at the w cap happened earlier,
+  steps 34-88, and passed); not centripetal (max |v*w| 0.39 in the last 100 steps,
+  under the 0.45 limit); no emergency stop, nearest person 1.3-1.6 m, and the
+  characters have no collision anyway.
+  What happened: v jumped from 0.35 to 0.87 m/s between steps 126 and 127 (~5 m/s^2),
+  stayed above 0.8 for 8 steps, and at step 136 both bearings jumped ~50 deg in one
+  tick -- the body going over. The runner has no forward-acceleration limit, and the
+  expert's v was smooth (proportional to distance). Suspected, not verified: a jump
+  at an action-chunk boundary (the policy plans 10 steps at a time).
+
+Same seeds, driving vs v forced to 0 (cl_batch_balanced)
+  seed    on-sum no-drive -> drive     named in view (seeds 7-12 only)
+    1        88 % -> 140 %
+    2       111 % -> 147 %
+    3       155 % -> 159 %
+    4       110 % -> 143 %
+    5       109 % -> 115 %
+    6       129 % -> 142 %
+    7       195 % -> 131 %               93.7 % -> 55.2 %
+    8       135 % -> 144 %               43.5 % -> 60.2 %
+    9       131 % -> 136 %               58.4 % -> 51.7 %
+   10       160 % -> 104 %               88.4 % -> 53.9 %
+   12       122 % -> 135 %               61.2 % -> 47.9 %
+  on-sum difference: mean +4.6, p = 0.67, driving higher in 9/11
+  named-in-view difference (5 pairs): mean -15.2 pts, p = 0.20, driving higher in 1/5
+  Not attributable to driving alone: avoidance distances and arm pose also changed.
+
+Reading
+- With its forward speed published, the policy follows the named colour clearly and
+  consistently: 11/11 pairs on both scores, the most consistent of all batches.
+- It keeps the named person at 2.8 m on average, farther than the expert's 2.0 m, and
+  has them in view about half the time -- no better than when it could only turn.
+  The earlier guess that forcing v = 0 had understated in-view time is not supported.
+- It is not safe on its own: 9 of 23 runs needed the ground-truth emergency stop, mostly
+  because it drove close to the OTHER person, and one run tipped from a sudden jump in
+  forward speed. Before any demo: add a forward-acceleration limit and a sensor-based
+  stop that does not depend on ground truth.
+
+==== CORRECTION 2026-09-15 (after this batch) ====
+1. The "front-lidar wall limit" copied from follow_expert.py watches the REAR arc.
+   /scan is virtual_laser_link, yaw 0 against base_link, angle_min -180 deg, so beam 0
+   points straight behind (measured: +180 deg = 7.98 m back wall, +-90 deg = 6.00 m side
+   walls). follow_expert.front_clear() treats beams around index 0 as ahead. The expert
+   collected its data with this, and this batch reproduced it: the wall limit here
+   reacted to what was behind the robot, not in front.
+2. The lidar does not see the people at all (no collision geometry): purple at
+   5.35 m / -4 deg read 8.00 m. A lidar-based stop could never have prevented the
+   close approaches above; only the camera sees the people.
+3. The v jump that tipped s11_yellow (+0.52 m/s in a tick) is not unusual for the
+   expert either: 10.7 % of its forward speed-ups exceed 0.3 m/s per tick.
+The next batch (cl_batch_drive_safe) uses the true forward arc, a camera-based stop,
+a forward-acceleration limit, and logs the ground-truth distance without acting on it.

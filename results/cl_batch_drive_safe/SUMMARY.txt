@@ -1,0 +1,82 @@
+Driving batch with sensor-based safety, seeds 1-12 -- 2026-09-15
+Design fixed beforehand in DESIGN.txt (same folder). smoke_safe.csv and
+platform_seed2_before_batch.png are pre-batch checks, not results.
+
+checkpoint  train/smolvla_mswall/checkpoints/030000, no retraining
+scene       follow_room_2p_v2.usd, launch_2p_drive.sh (avoidance 2.6 / 1.2 m), arm tucked
+            and verified (elbow 2.616, wrist at 1.094 m, no arm in the platform view)
+runner      runner_2p.py --drive --max-accel 1.0 --true-front --cam-stop-y2 470
+            --cam-stop-halfdeg 25 --estop-dist 0 --gt-monitor-dist 1.0
+            --seconds 70 --warmup 25 --max-w 0.6 --max-dw 1.2 --trace
+failures    none -- 24/24 runs completed, no tip-overs (previous batch: 1 tip in 24)
+
+seed side   purple on/view(named,other)   yellow on/view(named,other)   on-sum
+   1  L      52% ( 33%, 37%)           64% ( 41%, 18%)          116%  view-diff   +19
+   2  R      69% ( 47%, 34%)           64% ( 47%, 27%)          133%  view-diff   +33
+   3  L      48% ( 36%, 49%)           55% ( 58%, 42%)          103%  view-diff    +3
+   4  R      53% ( 37%, 37%)           46% ( 43%, 44%)           99%  view-diff    -1
+   5  L      71% ( 45%, 17%)           53% ( 34%, 26%)          124%  view-diff   +36
+   6  R      69% ( 42%, 19%)           48% ( 32%, 37%)          117%  view-diff   +17
+   7  L      74% ( 56%, 14%)           87% ( 71%, 20%)          161%  view-diff   +93
+   8  R      67% ( 40%, 25%)           56% ( 37%, 27%)          123%  view-diff   +26
+   9  L      24% ( 13%, 63%)           95% ( 83%,  8%)          119%  view-diff   +25
+  10  R      41% ( 51%, 59%)           94% ( 80%,  9%)          135%  view-diff   +64
+  11  L      54% ( 49%, 42%)           62% ( 53%, 27%)          116%  view-diff   +33
+  12  R      77% ( 40%,  7%)           87% ( 76%, 26%)          164%  view-diff   +83
+
+on_target sum - 100 over 12 pairs: mean +25.8, t = 4.47, two-sided p = 0.001; 11/12 above
+in-view named-minus-other over 12 traced pairs: mean +35.9 pts, t = 4.24, two-sided p = 0.001; 11/12 above 0
+named person in view, mean over traced runs: 47.7 %
+named-person distance mean 2.97 m, within 1.5-3.0 m 57.8 %, commanded v mean +0.29 m/s
+
+Against the previous driving batch (cl_batch_drive: ground-truth emergency stop, rear-arc wall
+limit, no acceleration limit)
+                                     previous            this batch
+  runs completed / tipped            23 / 1              24 / 0
+  on_target sum                      +36.0 (11/11)       +25.8 (11/12)
+  in-view named-minus-other          +51.5 (11/11)       +35.9 (11/12)
+  named-person distance              2.82 m              2.97 m
+  within 1.5-3.0 m                   62.5 %              57.8 %
+  named person in view               51.8 %              47.7 %
+  steps with a person < 1 m ahead    195 (9/23 runs)     89 (11/24 runs)
+  steps < 1 m: named / other person  46 / 184            53 / 42
+  closest approach                   0.70 m              0.59 m
+  (previous: steps counted with the same test as --gt-monitor-dist, from its distances;
+   there the ground-truth stop held forward speed at 0 during them)
+
+Same seeds, this batch minus previous (11 pairs, seed 11 missing in previous):
+  on_target sum          -9.3   p = 0.33   this batch higher 4/11
+  named distance         +0.16 m p = 0.23   7/11
+  named person in view   -5.2   p = 0.19   3/11
+  steps < 1 m ahead      -5.8   p = 0.16   3/11
+None significant.
+
+Interventions
+  camera stops           1306 steps
+  acceleration clips     3984 steps (~24 % of all 16800 steps)
+
+Camera stop vs ground truth, whole batch (steps with exactly one person within +-25 deg)
+  true distance    n      box detected   stop fired (y2 >= 470)
+  < 1.0 m          10     90 %           90 %
+  1.0 - 1.3 m     123     80 %           80 %
+  1.3 - 1.6 m     321     69 %           69 %
+  1.6 - 2.0 m     920     74 %           73 %
+  2.0 - 2.5 m    1834     85 %           28 %
+  2.5 - 3.5 m    2816     93 %            0 %
+  A person partly out of frame is often not detected, so 20-30 % of close steps in the
+  path are missed; 28 % of steps at 2.0-2.5 m fire early.
+Steps with a person < 1 m ahead and no camera stop: 66
+  56 person outside the +-25 deg band (beside the robot), 6 box below row 470, 4 no box.
+
+Reading
+- The sensor-only safety layer did what it was for: no tip-overs, and close approaches to
+  the distractor fell from 184 to 42 steps. It never uses ground truth.
+- It is not complete: the robot still came within 0.59 m, mostly of people outside the
+  camera's central band -- beside it, where neither the camera stop nor the lidar (which
+  cannot see people) reaches. Close to the target itself it is about unchanged (46 -> 53).
+- The policy still follows the named colour (11/12 pairs, p = 0.001 on both scores), with
+  all following numbers slightly worse than without the layer; none of those differences
+  is significant on 11 pairs. The layer intervenes a lot (acceleration limit on ~24 % of
+  steps), which is the likely cost.
+- Next, if needed: widen the camera stop to the whole frame for slow speeds, or add a rule
+  for people near the frame edge; and consider the acceleration limit's effect on following.

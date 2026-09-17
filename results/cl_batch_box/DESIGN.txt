@@ -1,0 +1,46 @@
+Closed-loop batch for the box-action policy -- design, written 2026-09-17 BEFORE the batch
+
+Question: does a policy that also predicts WHERE the named person is still drive as well,
+and does its predicted box tell us why it fails when it fails?
+
+checkpoint  train/smolvla_mswall_box/checkpoints/030000 (30k steps, action = 7 dims:
+            v, w, box_x1..box_y2, box_visible; final loss 0.050)
+dataset     lerobot_mswall_box, same 37/10 split as lerobot_mswall, box labels from the
+            crop pipeline's own detections matched to the named person by
+            u = cx - fx*(y/x); 72.1 % of training frames carry a box, the rest are zeros
+            with box_visible = 0
+scene/sim   unchanged from cl_batch_drive_safe: follow_room_2p_v2.usd, launch_2p_drive.sh,
+            avoidance 2.6/1.2 m, arm tucked before the batch
+runner      runner_2p.py --drive --max-accel 1.0 --true-front --cam-stop-y2 470
+            --cam-stop-halfdeg 25 --estop-dist 0 --gt-monitor-dist 1.0
+            --seconds 70 --warmup 25 --max-w 0.6 --max-dw 1.2 --trace
+            identical to cl_batch_drive_safe, so that batch is the control
+words       purple / yellow, target = the person wearing the named colour, 12 seeds,
+            odd seeds swap sides
+
+Only the first two action dims drive the robot. Dims 3-7 are logged by the runner as
+pred_x1..pred_vis and never touch control.
+
+Scores
+  instruction   on_target sum and in-view named-minus-other, paired over seeds
+  following     named-person distance, % within 1.5-3.0 m, % named person in view
+  safety        gt_close steps, closest approach, camera stops, acceleration clips, tips
+  box quality   analyze_box.py: does pred_vis agree with the named person really being in
+                view, and does the predicted box centre land on the named person or the
+                other one (within 60 px of where each really is)
+  comparison    same seeds against cl_batch_drive_safe (the same runner and sim, a policy
+                without the box dims)
+
+Read as follows
+  box good, control unchanged   the extra dims cost nothing and buy interpretability
+  box good, control worse       the 7-dim loss spends capacity on boxes; report the trade
+  box poor in closed loop but   the model localises when shown expert-like frames and
+    good offline                loses that once it drives itself -- a distribution-shift
+                                finding, not a training failure
+  box points at the OTHER       the clearest diagnosis available so far: a wrong turn
+    person while it turns       came from picking the wrong person, not from bad steering
+
+Offline, on held-out frames, this checkpoint already scores: visibility agreement 92 %,
+box centre error median 11 px, and the box on the named person in 87 of 92 frames where
+both it and the truth say visible. No significance threshold is set for the closed loop;
+p-values are reported.

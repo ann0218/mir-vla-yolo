@@ -1,0 +1,42 @@
+Unseen colour word test -- design, written 2026-09-15 BEFORE any run of this batch
+
+Question: does the policy map a colour word it was never trained on ("red") to a
+person wearing that colour? Training only ever saw purple and yellow.
+
+Checkpoint  train/smolvla_mswall/checkpoints/030000, no retraining.
+Pipeline    unchanged from cl_batch_balanced / cl_batch_swapcol: platform camera
+            by name, YOLO crops (2 people max), runner_2p.py --seconds 70
+            --warmup 25 --max-dw 1.2 --trace, 12 seeds, odd seeds swap sides.
+
+Why red REPLACES a person instead of being a third one: the policy input is the
+full frame plus exactly two person crops; with three people person_crops.py keeps
+the two widest boxes, which would test something else.
+
+Two scenes, both needed:
+
+  A  cl_batch_redpurple   PersonPurple wears purple, PersonYellow wears red
+     scenes/follow_room_2p_v2_redpurple.usd  (--wear yellow=red; 7 bytes from v2)
+     instructions "follow the person in purple" / "... in red"
+     WEARS="purple=purple yellow=red"
+
+  B  cl_batch_redyellow   PersonPurple wears red, PersonYellow wears yellow
+     (to be generated with --wear purple=red after A finishes)
+     instructions "... in red" / "... in yellow"
+     WEARS="purple=red yellow=yellow"
+
+Scoring as before: target = the person WEARING the named colour. Pass for a scene
+= on_target sum > 100 % and in-view named-minus-other > 0, paired over seeds.
+
+How to read the pair of scenes:
+
+  what the policy does with "red"      scene A (purple+red)   scene B (yellow+red)
+  grounds it to red pixels                 pass                   pass
+  treats it like "yellow"                  pass                   fail
+  treats it like "purple"                  fail                   pass
+  ignores the word                         fail (~100 %)          fail (~100 %)
+
+Only a pass in BOTH scenes supports "grounds an unseen colour word". A pass in one
+scene is explained by substituting a known word and is to be reported that way.
+The seen-word runs (purple in A, yellow in B) also show whether a never-seen red
+distractor breaks recognition of the trained colour; read them per word, not only
+through the sum.

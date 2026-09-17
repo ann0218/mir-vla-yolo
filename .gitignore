@@ -1,0 +1,21 @@
+# Regenerable or too large for git. Everything here is produced by the scripts
+# in vla/ from the raw dump, which itself is not published.
+__pycache__/
+*.pyc
+*.usd
+*.npy
+
+# datasets, checkpoints, raw episode dumps
+lerobot_*/
+train/
+raw_*/
+
+# the 450 PNGs media/box_overlay.mp4 was encoded from (109 MB)
+vid_box/
+
+# long-running process logs kept out of the history
+isaac_*.log
+srv_*.log
+train_*.log
+gen_*.log
+regen_*.log

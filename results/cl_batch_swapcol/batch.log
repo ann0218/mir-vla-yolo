@@ -1,0 +1,24 @@
+seed 1  purple  target=yellow steps=700 on_target=81% median|bearing| all=65deg late=72deg longest_lock=19.4s
+seed 1  yellow  target=purple steps=700 on_target=39% median|bearing| all=90deg late=113deg longest_lock=14.6s
+seed 2  purple  target=yellow steps=700 on_target=83% median|bearing| all=23deg late=49deg longest_lock=23.6s
+seed 2  yellow  target=purple steps=700 on_target=23% median|bearing| all=75deg late=103deg longest_lock=11.8s
+seed 3  purple  target=yellow steps=700 on_target=70% median|bearing| all=12deg late=5deg longest_lock=48.1s
+seed 3  yellow  target=purple steps=700 on_target=75% median|bearing| all=24deg late=3deg longest_lock=41.4s
+seed 4  purple  target=yellow steps=700 on_target=43% median|bearing| all=82deg late=83deg longest_lock=16.8s
+seed 4  yellow  target=purple steps=700 on_target=83% median|bearing| all=41deg late=75deg longest_lock=27.6s
+seed 5  purple  target=yellow steps=700 on_target=46% median|bearing| all=34deg late=51deg longest_lock=25.8s
+seed 5  yellow  target=purple steps=700 on_target=73% median|bearing| all=47deg late=62deg longest_lock=30.6s
+seed 6  purple  target=yellow steps=700 on_target=62% median|bearing| all=38deg late=15deg longest_lock=43.6s
+seed 6  yellow  target=purple steps=700 on_target=77% median|bearing| all=59deg late=135deg longest_lock=42.7s
+seed 7  purple  target=yellow steps=700 on_target=45% median|bearing| all=54deg late=5deg longest_lock=29.1s
+seed 7  yellow  target=purple steps=700 on_target=77% median|bearing| all=29deg late=68deg longest_lock=32.5s
+seed 8  purple  target=yellow steps=700 on_target=80% median|bearing| all=2deg late=1deg longest_lock=45.0s
+seed 8  yellow  target=purple steps=700 on_target=75% median|bearing| all=29deg late=25deg longest_lock=36.7s
+seed 9  purple  
+seed 9  yellow  target=purple steps=700 on_target=68% median|bearing| all=21deg late=16deg longest_lock=25.1s
+seed 10  purple  target=yellow steps=700 on_target=92% median|bearing| all=11deg late=11deg longest_lock=42.8s
+seed 10  yellow  target=purple steps=700 on_target=83% median|bearing| all=26deg late=26deg longest_lock=40.2s
+seed 11  purple  target=yellow steps=700 on_target=62% median|bearing| all=55deg late=67deg longest_lock=22.7s
+seed 11  yellow  target=purple steps=700 on_target=50% median|bearing| all=58deg late=45deg longest_lock=15.8s
+seed 12  purple  target=yellow steps=700 on_target=79% median|bearing| all=28deg late=32deg longest_lock=22.3s
+seed 12  yellow  target=purple steps=700 on_target=52% median|bearing| all=33deg late=21deg longest_lock=12.4s

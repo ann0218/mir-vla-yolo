@@ -1,0 +1,78 @@
+Scene B of the unseen-colour test: yellow + red -- 2026-09-15
+Design fixed beforehand in ../cl_batch_redpurple/DESIGN.txt. Scene A is ../cl_batch_redpurple.
+
+checkpoint  train/smolvla_mswall/checkpoints/030000, no retraining
+scene       scenes/follow_room_2p_v2_redyellow.usd (gen_follow_scene_2p.py --wear purple=red;
+            11 bytes from v2). /World/PersonPurple red, /World/PersonYellow yellow.
+            platform_seed2_red_yellow.png taken with grab_image.py (correct colours)
+words       "follow the person in red" (never trained) / "... in yellow" (trained)
+runner      runner_2p.py --seconds 70 --warmup 25 --max-dw 1.2 --trace, 12 seeds,
+            odd seeds swap sides. WEARS="purple=red yellow=yellow"
+failures    s9_red -- ROBOT TIPPED OVER (tilt 35 deg) at step 116. Pair 9 dropped.
+            NOT the sustained-spin mode: longest same-direction run at the w cap was 6
+            steps, 6 of its last 100 steps at the cap. Cause not determined -- the
+            trace has bearings but no distances, so contact cannot be checked.
+detections  server, this batch, ~16300 frames: 0 people 24 %, 1 person 56 %, 2 people 20 %
+
+seed side   red    on/view(named,other)   yellow on/view(named,other)   on-sum
+   1  L       8% ( 16%, 79%)           72% ( 34%, 18%)           80%  view-diff   -48
+   2  R      58% ( 67%, 56%)           75% ( 86%, 40%)          133%  view-diff   +58
+   3  L     100% ( 74%,  5%)            0% (  5%, 76%)          100%  view-diff    -3
+   4  R      74% ( 76%, 34%)           23% ( 33%, 74%)           97%  view-diff    +1
+   5  L      47% ( 49%, 57%)           44% ( 65%, 54%)           91%  view-diff    +3
+   6  R      78% ( 37%, 12%)            0% (  5%, 76%)           78%  view-diff   -46
+   7  L      94% ( 83%, 18%)            5% ( 22%, 92%)           99%  view-diff    -4
+   8  R      80% ( 54%,  7%)           79% ( 86%, 38%)          159%  view-diff   +95
+  10  R      72% ( 82%, 47%)           27% ( 47%, 83%)           99%  view-diff    -1
+  11  L      40% ( 44%, 29%)           47% ( 37%, 21%)           87%  view-diff   +31
+  12  R      67% ( 72%, 58%)           27% ( 56%, 77%)           94%  view-diff    -7
+("side" is where the purple TF frame starts; here that prim wears red.)
+
+on_target sum - 100 over 11 pairs: mean +1.5, t = 0.21, two-sided p = 0.835; 2/11 above
+in-view named-minus-other over 11 traced pairs: mean +7.2 pts, t = 0.58, two-sided p = 0.576; 5/11 above 0
+
+Per word (all traced runs; red n = 11, yellow n = 12)
+  red     on_target 65.3 %, red in view 59.7 %, yellow in view 36.6 %, diff +23.1 pts (p = 0.065, 9/11)
+  yellow  on_target 35.9 %, yellow in view 41.7 %, red in view 59.9 %, diff -18.2 pts (p = 0.181, 5/12)
+
+The trained word "yellow" with a red distractor vs its usual purple one (seeds 7-12):
+  yellow in view dropped by 18.0 pts on average, lower in 4 of 6 seeds
+  (seed 7: 100.0 % with a purple distractor, 21.9 % with a red one).
+
+==== Both scenes together ====
+
+Instruction effect, paired by seed: how much more a person is in view when the
+instruction names their colour than when it names the other colour. Zero if the
+robot's attention does not depend on the words.
+
+                  on red person              on the other person        red / other in view,
+                                                                         whatever the word
+  A purple+red    +19.4 pts (p = 0.13, 7/12)  +13.2 pts (p = 0.08, 8/12)  50.2 % / 37.3 %
+  B yellow+red     +0.6 pts (p = 0.91, 4/11)   +6.6 pts (p = 0.48, 5/11)  59.4 % / 39.9 %
+
+Against DESIGN.txt: A borderline (p = 0.039 / 0.052), B no effect (p = 0.84 / 0.58).
+That matches the "red treated as yellow" row on pass/fail, but NOT its prediction:
+that row says the red-word runs in B should look at the yellow person, and they
+looked at the red one (59.7 % vs 36.6 %). No row of the table fits. The table did
+not anticipate the pattern that the data show:
+
+  The unseen colour draws the robot regardless of the instruction. In B the red
+  person is in view ~59 % whether the word is "red" or "yellow", and the trained
+  word "yellow" loses to it. In A the instruction still moves attention somewhat,
+  in both directions, which is what put the paired score just over the line.
+
+Reading
+- No evidence that the policy grounds the unseen word "red". The red-word runs
+  looked "right" in both scenes only because the robot goes to the red person
+  anyway.
+- The purple/yellow discrimination it did learn is brittle: a distractor in a colour
+  never seen in training weakens the trained word (purple, scene A) or overrides it
+  (yellow, scene B).
+- So the earlier results hold -- within purple and yellow the policy follows the named
+  colour, and the colour swap showed that is the cue it uses -- but they are
+  in-distribution. "Understands colour words" is not supported.
+
+Why red might be salient is not established here. Plausible: red is out of
+distribution for the crops, and the model's action head was never trained to ignore
+it; or red is simply more saturated/contrasting against the grey room. A test with
+an unseen but low-salience colour would separate those; not run.

@@ -1,0 +1,67 @@
+Closed-loop paired batch, seeds 1-6 -- 2026-09-14
+checkpoint  train/smolvla_mswall/checkpoints/030000 (37 train episodes, 30k steps)
+server      policy_server.py --crops, platform camera selected by name (camera1)
+sim         launch_2p_eval.sh: --fold-arm, person homes (4.5,+-1.3), avoid 3.5/2.0 m,
+            reset file resets people AND robot; odd seeds swap sides
+runner      runner_2p.py --seconds 70 --warmup 25, --max-dw 1.2, v forced to 0
+
+Supersedes cl_batch_balanced_WRONGCAM/: the runner filled its camera dict in
+message-arrival order and the server took the first image, so each run tracked
+from a random one of three cameras, mostly a corner view of the whole room.
+
+seed purple-side  purple on/median/late/lock    yellow on/median/late/lock    sum
+  1   left          38%   92   81  23.1s          50%   77  111  19.4s        88%
+  2   right         51%   33   14  26.8s          60%   34   51  20.8s       111%
+  3   left          58%   29    5  38.1s          97%    7    5  67.9s       155%
+  4   right         76%   40   90  22.2s          34%   96  123  13.5s       110%
+  5   left          70%   22   22  25.8s          39%  100  113  15.4s       109%
+  6   right         77%   39  127  42.9s          52%   22    3  36.1s       129%
+
+sum - 100 %: mean +17.0, sd 22.7, t = 1.83 (df 5), two-sided p = 0.13
+sign test: 5/6 pairs above 100 %, one-sided p = 0.11
+purple mean 61.7 %, yellow mean 55.3 %
+late-half median bearing inside the 75 deg view: 5/12 runs
+median bearing > 90 deg over the whole run: 3/12 runs
+no tip-overs; every warm-up finished in 0.3 s with both people in frame
+
+Detections (server, 8400 frames): 0 people 31 %, 1 person 57 %, 2 people 12 %.
+Per run, the three runs with the target behind (92-100 deg) saw nobody in
+41-59 % of frames -- physically consistent with the platform camera.
+
+Reading: trending the right way, not significant at n = 6. At this effect size
+roughly 9-12 pairs are needed. on_target is weak (counts "nearer than the other"
+even with both behind), so seeds 7-12 also save per-step traces.
+
+
+==== Seeds 7-12 added (same server, same sim, --trace on) -- 2026-09-14 ====
+12 pairs was fixed before seeds 7-12 were run; an 8-pair look mid-batch
+(p = 0.044) was not used as the stopping point.
+
+seed side   purple on/view(named,other)   yellow on/view(named,other)   on-sum
+   1  L      38% (   -,    -)           50% (   -,    -)           88%
+   2  R      51% (   -,    -)           60% (   -,    -)          111%
+   3  L      58% (   -,    -)           97% (   -,    -)          155%
+   4  R      76% (   -,    -)           34% (   -,    -)          110%
+   5  L      70% (   -,    -)           39% (   -,    -)          109%
+   6  R      77% (   -,    -)           52% (   -,    -)          129%
+   7  L      95% ( 87%, 19%)          100% (100%, 19%)          195%  view-diff  +149
+   8  R      91% ( 55%,  7%)           44% ( 32%, 47%)          135%  view-diff   +33
+   9  L      46% ( 48%, 61%)           85% ( 69%, 16%)          131%  view-diff   +40
+  10  R      72% ( 87%, 50%)           88% ( 90%, 31%)          160%  view-diff   +95
+  11  L      86% ( 82%, 27%)           57% ( 32%, 21%)          143%  view-diff   +67
+  12  R      42% ( 65%, 74%)           80% ( 57%, 24%)          122%  view-diff   +25
+
+on_target sum - 100 over 12 pairs: mean +32.3, t = 3.94, two-sided p = 0.002; 11/12 above, sign p = 0.003
+in-view named-minus-other over 6 traced pairs: mean +68.3 pts, t = 3.53, two-sided p = 0.017; 6/6 above 0, sign p = 0.016
+named person in view, mean over traced runs: 67.1 %
+
+seeds 1-6 sum mean 117.0 %, seeds 7-12 147.7 %; Welch t = 2.15, df 9.8, two-sided p = 0.057
+(corrected: an earlier version of this line matched mid-run progress lines instead of RESULT)
+detections seeds 7-12 (8400 frames): 0 people 19 %, 1 person 63 %, 2 people 18 %
+
+in_view = fraction of steps with |bearing| < 37.6 deg (75.2 deg platform view).
+view-diff = (named - other in view) summed over the purple and yellow runs of a
+seed; a policy whose behaviour does not depend on the instruction scores 0 in
+expectation. on_target sum: such a policy scores 100 %; side swap on odd seeds
+puts a colour-word-to-turn-direction rule at 100 % as well.
+Detection split per run is recovered from cumulative server counts, +-12 %.

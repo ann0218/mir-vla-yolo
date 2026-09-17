@@ -1,0 +1,44 @@
+Driving batch with sensor-based safety -- design, written 2026-09-15 BEFORE the batch
+(smoke_safe.csv, one 40 s run, was used only to check plumbing and calibrate the camera
+stop; it is not part of any result)
+
+Question: does the policy still follow the named person once the safety layer no longer
+relies on ground truth, and does that layer keep it clear of people and upright?
+
+Baseline to compare with: cl_batch_drive (same checkpoint, scene, seeds, avoidance, arm,
+--max-w 0.6, --max-dw 1.2). Changes in this batch, and only these:
+
+  1. forward-acceleration limit  --max-accel 1.0 (m/s^2, i.e. +0.1 m/s per tick).
+     Speed-ups while moving forward only; braking and reversing untouched.
+     Why: s11_yellow tipped after v jumped +0.52 m/s in one tick. The expert makes such
+     jumps too (10.7 % of its forward speed-ups exceed 0.3 m/s per tick), so this limit
+     will slow ~21-23 % of forward speed-ups -- a deliberate departure from the data.
+  2. wall limit on the TRUE forward arc  --true-front
+     The expert's front_clear() and the previous batch watched the rear arc (beam 0 of
+     /scan points backwards). Same thresholds: slow from 1.6 m, stop at 0.7 m, 90 deg arc.
+  3. camera stop instead of ground-truth stop  --cam-stop-y2 470 --cam-stop-halfdeg 25
+     No forward speed while a YOLO person box whose centre is within +-25 deg of the axis
+     reaches image row 470 (frame bottom 480). The lidar cannot see the people at all.
+     Calibrated on smoke_safe.csv, steps with exactly one person inside +-25 deg:
+        true distance 1.6-2.0 m  n=5   box bottom median 479.6   >= 470 in 100 %
+        true distance 2.0-2.5 m  n=8   box bottom median 462.5   >= 470 in   0 %
+        true distance 2.5-3.5 m  n=17  box bottom median 382.3   >= 470 in   0 %
+     So it fires at roughly <= 2.0 m, not the ~1.55 m estimated from camera geometry;
+     no samples under 1.6 m. More conservative than the expert's 1.7 m back-off.
+  4. ground truth logged, NOT acted on  --estop-dist 0 --gt-monitor-dist 1.0
+     gt_close counts steps with a person < 1.0 m ahead -- the steps the previous batch's
+     emergency stop would have caught.
+
+Everything else as cl_batch_drive: runner_2p.py --drive --seconds 70 --warmup 25 --trace,
+12 seeds, odd seeds swap sides, words purple / yellow, target = person wearing the word.
+
+Scores
+  instruction  on_target sum and in-view named-minus-other, paired over seeds
+  following    named-person distance mean, % within 1.5-3.0 m, % named person in view
+  safety       gt_close steps and runs, closest approach, camera stops, acceleration
+               clips, tip-overs
+  comparison   same seeds vs cl_batch_drive for all of the above
+
+No pass/fail threshold; p-values reported. Because four things change at once, a
+difference from cl_batch_drive is attributed to the safety layer as a whole, not to any
+single part of it.

@@ -1,0 +1,64 @@
+Scene A of the unseen-colour test: purple + red -- 2026-09-15
+Design fixed beforehand in DESIGN.txt (same folder).
+
+checkpoint  train/smolvla_mswall/checkpoints/030000, no retraining
+scene       scenes/follow_room_2p_v2_redpurple.usd (gen_follow_scene_2p.py --wear yellow=red;
+            7 bytes from v2). /World/PersonPurple purple, /World/PersonYellow red.
+            platform_seed2_purple_red.png taken with grab_image.py (cv_bridge, correct colours)
+words       "follow the person in purple" (trained) / "... in red" (never trained)
+runner      runner_2p.py --seconds 70 --warmup 25 --max-dw 1.2 --trace, 12 seeds,
+            odd seeds swap sides. WEARS="purple=purple yellow=red"
+failures    none; 24 runs, 24 traces
+detections  server, whole batch, 16800 frames: 0 people 30 %, 1 person 54 %, 2 people 16 %
+
+seed side   purple on/view(named,other)   red    on/view(named,other)   on-sum
+   1  L      27% ( 26%, 60%)           71% ( 40%, 14%)           98%  view-diff    -9
+   2  R      59% ( 38%, 38%)           78% ( 92%, 25%)          137%  view-diff   +67
+   3  L      73% ( 65%, 15%)           98% (100%,  4%)          171%  view-diff  +146
+   4  R      57% ( 24%, 16%)           25% ( 29%, 42%)           82%  view-diff    -5
+   5  L      44% ( 59%, 67%)           51% ( 56%, 49%)           95%  view-diff    -1
+   6  R      79% ( 49%, 12%)           16% (  7%, 58%)           95%  view-diff   -14
+   7  L      73% ( 78%, 35%)           79% ( 85%, 41%)          152%  view-diff   +87
+   8  R      89% ( 42%,  9%)           38% ( 32%, 44%)          127%  view-diff   +22
+   9  L      17% ( 28%, 85%)           72% ( 50%, 23%)           89%  view-diff   -31
+  10  R      46% ( 23%, 45%)           89% (100%, 29%)          135%  view-diff   +49
+  11  L      43% ( 29%, 21%)           85% ( 79%, 19%)          128%  view-diff   +67
+  12  R      44% ( 67%, 83%)           71% ( 48%, 19%)          115%  view-diff   +13
+
+on_target sum - 100 over 12 pairs: mean +18.7, t = 2.34, two-sided p = 0.039; 7/12 above, sign p = 0.387
+in-view named-minus-other over 12 traced pairs: mean +32.6 pts, t = 2.18, two-sided p = 0.052; 7/12 above 0, sign p = 0.387
+named person in view, mean over traced runs: 51.9 %
+
+Per word (named-minus-other in view has no zero anchor on its own -- read the two together)
+  purple  on_target 54.2 %, purple in view 43.9 %, red in view 40.5 %,  diff  +3.4 pts (p = 0.73, 6/12 positive)
+  red     on_target 64.4 %, red in view    59.9 %, purple in view 30.7 %, diff +29.2 pts (p = 0.034, 9/12 positive)
+
+The trained word "purple" with a red distractor vs its usual yellow one (seeds 7-12, traced in both):
+  seed   yellow distractor: purple / yellow in view   red distractor: purple / red in view
+    7        87.4 % / 19.3 %                              77.9 % / 35.1 %
+    8        54.7 % /  7.1 %                              42.3 % /  9.3 %
+    9        47.7 % / 60.9 %                              27.6 % / 84.9 %
+   10        87.0 % / 50.1 %                              23.0 % / 45.3 %
+   11        82.4 % / 26.6 %                              28.6 % / 20.9 %
+   12        65.0 % / 73.6 %                              66.6 % / 82.9 %
+  purple in view dropped in 5 of 6 seeds once the distractor was red.
+
+Against the pre-registered criterion: borderline pass (p = 0.039 / 0.052), far weaker
+than the trained pair (purple/yellow: 11/12, p = 0.002) and carried entirely by the
+red-word runs; the purple word lost its selectivity.
+
+Two readings fit this scene equally well, and scene B (yellow + red) separates them:
+  (1) the policy grounds "red", but red and purple look alike to it, so "purple"
+      becomes ambiguous next to a red person;
+  (2) the policy mostly learned a yellow detector -- "yellow" = the yellow person,
+      "purple" = the non-yellow one. With no yellow present "purple" has nothing to
+      go on, and "red", nearer to yellow in hue, is handled like "yellow".
+Under (2) "red" in scene B should send the robot to the YELLOW person.
+
+==== Update after scene B (2026-09-15) ====
+Scene B (yellow + red) showed no instruction effect (paired p = 0.84 / 0.58), and the
+red person was in view ~59 % whether the word was "red" or "yellow". Read together, the
+borderline pass here is not evidence that "red" is grounded: the robot is drawn to the
+unseen colour regardless of the words, and in this scene the instruction still shifted
+attention somewhat. Neither reading (1) nor (2) above fits scene B. Full joint reading,
+including the per-scene instruction effect, in ../cl_batch_redyellow/SUMMARY.txt.
