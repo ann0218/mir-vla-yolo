@@ -1,0 +1,29 @@
+# Training and inference environment (conda env, Python 3.11.15).
+# These are the versions this project was run on, not minimums.
+#
+#   conda create -n env_lerobot python=3.11 -y
+#   conda activate env_lerobot
+#   pip install -r vla/requirements.txt
+#
+# Isaac Sim lives in a SEPARATE environment (isaacsim 5.1.0.0, numpy 1.26,
+# torch 2.7.0+cu128) and ROS 2 Humble lives in a container. Do not try to merge
+# them: Isaac ships Python 3.11, Humble's rclpy is built for 3.10, and lerobot
+# needs torch.
+
+# torch 2.10.0 built for CUDA 12.8 (RTX 5090, driver 580.173.02):
+#   pip install torch==2.10.0 --index-url https://download.pytorch.org/whl/cu128
+torch==2.10.0
+
+lerobot==0.4.4
+transformers==4.57.6
+peft==0.20.0
+
+# YOLO11n detection + ByteTrack. lap is what the tracker needs; without it
+# ultralytics falls back and the ids are useless.
+ultralytics==8.4.146
+lap==0.5.13
+
+opencv-python==5.0.0
+numpy==2.2.6
+pandas==3.0.5
+pyarrow==25.0.1
